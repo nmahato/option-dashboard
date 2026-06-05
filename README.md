@@ -7,6 +7,7 @@ A real-time Tesla options simulator and trading alert system built with vanilla 
 - Options simulator with a Black-Scholes pricing model and live P&L curve
 - Interactive sliders for spot price, strike, DTE, IV, and contracts
 - Scenario forecasts across bear, bull, and flat cases at expiry
+- Strategy library covering long/short calls and puts, spreads, straddles, strangles, condors, butterflies, collars, and covered calls
 - Greeks dashboard with Delta, Gamma, Theta, and Vega
 - Alert system for buy, sell, take-profit, and stop-loss triggers
 - Risk profile chart showing option value across a price range
@@ -31,6 +32,7 @@ open index.html
 |--------|-------------|
 | TSLA spot price | Current market price of Tesla stock |
 | Strike price | The option's strike price |
+| Wing width | Spread width used by multi-leg strategies |
 | Days to expiry | How many days until the option expires |
 | Implied volatility | Market's expected volatility (IV%) |
 | Contracts | Number of option contracts (1 contract = 100 shares) |
@@ -39,6 +41,7 @@ open index.html
 
 - Buy call / Buy put - triggers entry when your price condition is met
 - Sell call - triggers exit at your target
+- Multi-leg strategies can be selected from the Strategy menu in the dashboard
 - Take profit - fires when P&L gain exceeds a threshold
 - Stop loss - fires when P&L loss exceeds a threshold
 

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -159,6 +159,11 @@
   }
   .form-input:focus, .form-select:focus { border-color: var(--accent); }
   .form-select option { background: var(--surface2); }
+  .strategy-select-wrap { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+  .strategy-desc {
+    font-size: 11px; color: var(--hint); margin-top: 8px;
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface2);
+  }
   .add-alert-btn {
     background: var(--green-dim); border: 1px solid var(--green); border-radius: 6px;
     color: var(--green); font-family: var(--mono); font-size: 11px; font-weight: 500;
@@ -212,11 +217,31 @@
 <div class="layout">
   <aside class="sidebar">
     <div>
-      <p class="section-title">Option type</p>
-      <div class="type-toggle">
-        <button class="type-btn active-call" id="btn-call" onclick="setType('call')">CALL ↑</button>
-        <button class="type-btn" id="btn-put" onclick="setType('put')">PUT ↓</button>
+      <p class="section-title">Strategy</p>
+      <div class="strategy-select-wrap">
+        <label class="form-label" for="strategy-select">Option strategy</label>
+        <select class="form-select" id="strategy-select" onchange="setStrategy(this.value)">
+          <option value="long_call">Long call</option>
+          <option value="long_put">Long put</option>
+          <option value="short_call">Short call</option>
+          <option value="short_put">Short put</option>
+          <option value="bull_call_spread">Bull call spread</option>
+          <option value="bear_put_spread">Bear put spread</option>
+          <option value="bull_put_spread">Bull put spread</option>
+          <option value="bear_call_spread">Bear call spread</option>
+          <option value="long_straddle">Long straddle</option>
+          <option value="short_straddle">Short straddle</option>
+          <option value="long_strangle">Long strangle</option>
+          <option value="short_strangle">Short strangle</option>
+          <option value="iron_condor">Iron condor</option>
+          <option value="iron_butterfly">Iron butterfly</option>
+          <option value="butterfly_spread">Call butterfly spread</option>
+          <option value="covered_call">Covered call</option>
+          <option value="protective_put">Protective put</option>
+          <option value="collar">Collar</option>
+        </select>
       </div>
+      <p class="strategy-desc" id="strategy-desc"></p>
     </div>
     <div>
       <p class="section-title">Parameters</p>
@@ -227,6 +252,10 @@
       <div class="slider-block">
         <div class="slider-header"><span class="slider-name">Strike price</span><span class="slider-value" id="out-strike">$420</span></div>
         <input type="range" id="sl-strike" min="300" max="600" step="5" value="420" oninput="update()">
+      </div>
+      <div class="slider-block">
+        <div class="slider-header"><span class="slider-name">Wing width</span><span class="slider-value" id="out-wing">15</span></div>
+        <input type="range" id="sl-wing" min="5" max="50" step="5" value="15" oninput="update()">
       </div>
       <div class="slider-block">
         <div class="slider-header"><span class="slider-name">Days to expiry</span><span class="slider-value" id="out-dte">21d</span></div>
@@ -250,24 +279,24 @@
   <main class="main">
     <div class="metrics-grid">
       <div class="metric-card">
-        <div class="metric-label">Option premium</div>
+        <div class="metric-label">Net debit / credit</div>
         <div class="metric-val" id="m-premium">—</div>
-        <div class="metric-sub">per share</div>
+        <div class="metric-sub">to open the strategy</div>
       </div>
       <div class="metric-card">
-        <div class="metric-label">Total cost</div>
+        <div class="metric-label">Max profit</div>
         <div class="metric-val" id="m-cost">—</div>
-        <div class="metric-sub">to enter</div>
+        <div class="metric-sub">at expiry</div>
       </div>
       <div class="metric-card">
-        <div class="metric-label">Breakeven</div>
+        <div class="metric-label">Max loss</div>
         <div class="metric-val" id="m-breakeven">—</div>
         <div class="metric-sub">at expiry</div>
       </div>
       <div class="metric-card">
-        <div class="metric-label">Current P&L</div>
+        <div class="metric-label">P&L at spot</div>
         <div class="metric-val" id="m-pnl">—</div>
-        <div class="metric-sub">unrealized</div>
+        <div class="metric-sub">if it expired now</div>
       </div>
     </div>
 
@@ -281,7 +310,7 @@
         </div>
       </div>
       <div style="position:relative;width:100%;height:220px;">
-        <canvas id="plChart" role="img" aria-label="TSLA options profit and loss curve at expiry"></canvas>
+        <canvas id="plChart" role="img" aria-label="Strategy profit and loss curve at expiry"></canvas>
       </div>
     </div>
 
@@ -295,9 +324,9 @@
         </div>
       </div>
       <div class="greeks-card">
-        <p class="section-title">Risk profile</p>
+        <p class="section-title">Strategy profile</p>
         <div style="position:relative;width:100%;height:180px;">
-          <canvas id="riskChart" role="img" aria-label="Options risk profile across different stock prices"></canvas>
+          <canvas id="riskChart" role="img" aria-label="Strategy value across different stock prices"></canvas>
         </div>
       </div>
     </div>
@@ -341,197 +370,351 @@
   <span class="footer-note">Powered by Black-Scholes · For educational purposes only · Not financial advice</span>
   <span class="footer-note">TSLA Options Dashboard · Built with Claude</span>
 </footer>
-
 <script>
-  let optionType = 'call';
+  let selectedStrategy = 'long_call';
   let plChart = null, riskChart = null;
   let alerts = [];
 
+  const strategyCatalog = {
+    long_call: { label: 'Long call', description: 'Directional bullish exposure with limited downside.', legs: [{ kind: 'option', optionType: 'call', side: 1, strike: 'K', qty: 1 }] },
+    long_put: { label: 'Long put', description: 'Directional bearish exposure with limited downside.', legs: [{ kind: 'option', optionType: 'put', side: 1, strike: 'K', qty: 1 }] },
+    short_call: { label: 'Short call', description: 'Bearish or neutral view with premium collected upfront.', legs: [{ kind: 'option', optionType: 'call', side: -1, strike: 'K', qty: 1 }] },
+    short_put: { label: 'Short put', description: 'Bullish or neutral view with premium collected upfront.', legs: [{ kind: 'option', optionType: 'put', side: -1, strike: 'K', qty: 1 }] },
+    bull_call_spread: { label: 'Bull call spread', description: 'Bullish debit spread with defined risk and defined reward.', legs: [{ kind: 'option', optionType: 'call', side: 1, strike: 'K', qty: 1 }, { kind: 'option', optionType: 'call', side: -1, strike: 'K+W', qty: 1 }] },
+    bear_put_spread: { label: 'Bear put spread', description: 'Bearish debit spread with capped downside and capped upside.', legs: [{ kind: 'option', optionType: 'put', side: 1, strike: 'K+W', qty: 1 }, { kind: 'option', optionType: 'put', side: -1, strike: 'K', qty: 1 }] },
+    bull_put_spread: { label: 'Bull put spread', description: 'Bullish credit spread with defined risk and defined reward.', legs: [{ kind: 'option', optionType: 'put', side: -1, strike: 'K', qty: 1 }, { kind: 'option', optionType: 'put', side: 1, strike: 'K-W', qty: 1 }] },
+    bear_call_spread: { label: 'Bear call spread', description: 'Bearish credit spread with defined risk and defined reward.', legs: [{ kind: 'option', optionType: 'call', side: -1, strike: 'K', qty: 1 }, { kind: 'option', optionType: 'call', side: 1, strike: 'K+W', qty: 1 }] },
+    long_straddle: { label: 'Long straddle', description: 'Volatility play that benefits from a large move in either direction.', legs: [{ kind: 'option', optionType: 'call', side: 1, strike: 'K', qty: 1 }, { kind: 'option', optionType: 'put', side: 1, strike: 'K', qty: 1 }] },
+    short_straddle: { label: 'Short straddle', description: 'Neutral volatility sale that profits if price stays near the strike.', legs: [{ kind: 'option', optionType: 'call', side: -1, strike: 'K', qty: 1 }, { kind: 'option', optionType: 'put', side: -1, strike: 'K', qty: 1 }] },
+    long_strangle: { label: 'Long strangle', description: 'Cheaper volatility play using out-of-the-money options.', legs: [{ kind: 'option', optionType: 'put', side: 1, strike: 'K-W', qty: 1 }, { kind: 'option', optionType: 'call', side: 1, strike: 'K+W', qty: 1 }] },
+    short_strangle: { label: 'Short strangle', description: 'Premium collection strategy that needs price to stay contained.', legs: [{ kind: 'option', optionType: 'put', side: -1, strike: 'K-W', qty: 1 }, { kind: 'option', optionType: 'call', side: -1, strike: 'K+W', qty: 1 }] },
+    iron_condor: { label: 'Iron condor', description: 'Range-bound credit strategy with defined risk on both sides.', legs: [{ kind: 'option', optionType: 'put', side: -1, strike: 'K-W', qty: 1 }, { kind: 'option', optionType: 'put', side: 1, strike: 'K-2W', qty: 1 }, { kind: 'option', optionType: 'call', side: -1, strike: 'K+W', qty: 1 }, { kind: 'option', optionType: 'call', side: 1, strike: 'K+2W', qty: 1 }] },
+    iron_butterfly: { label: 'Iron butterfly', description: 'Credit strategy centered around the strike with capped wings.', legs: [{ kind: 'option', optionType: 'put', side: -1, strike: 'K', qty: 1 }, { kind: 'option', optionType: 'call', side: -1, strike: 'K', qty: 1 }, { kind: 'option', optionType: 'put', side: 1, strike: 'K-W', qty: 1 }, { kind: 'option', optionType: 'call', side: 1, strike: 'K+W', qty: 1 }] },
+    butterfly_spread: { label: 'Call butterfly spread', description: 'Low-cost neutral strategy that peaks near the middle strike.', legs: [{ kind: 'option', optionType: 'call', side: 1, strike: 'K-W', qty: 1 }, { kind: 'option', optionType: 'call', side: -1, strike: 'K', qty: 2 }, { kind: 'option', optionType: 'call', side: 1, strike: 'K+W', qty: 1 }] },
+    covered_call: { label: 'Covered call', description: 'Own 100 shares and sell a call against the position for income.', legs: [{ kind: 'stock', side: 1, qty: 100 }, { kind: 'option', optionType: 'call', side: -1, strike: 'K', qty: 1 }] },
+    protective_put: { label: 'Protective put', description: 'Own 100 shares and buy a put for downside protection.', legs: [{ kind: 'stock', side: 1, qty: 100 }, { kind: 'option', optionType: 'put', side: 1, strike: 'K', qty: 1 }] },
+    collar: { label: 'Collar', description: 'Own the stock, buy downside protection, and sell upside.', legs: [{ kind: 'stock', side: 1, qty: 100 }, { kind: 'option', optionType: 'put', side: 1, strike: 'K-W', qty: 1 }, { kind: 'option', optionType: 'call', side: -1, strike: 'K+W', qty: 1 }] }
+  };
+
   function tick() {
     const now = new Date();
-    document.getElementById('hdr-time').textContent =
-      now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    document.getElementById('hdr-time').textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
   tick(); setInterval(tick, 1000);
 
   function normCDF(x) {
-    const a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;
-    const sign = x<0?-1:1; x=Math.abs(x)/Math.sqrt(2);
-    const t=1/(1+p*x);
-    const y=1-(((((a5*t+a4)*t+a3)*t+a2)*t+a1)*t)*Math.exp(-x*x);
-    return 0.5*(1+sign*y);
+    const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+    const sign = x < 0 ? -1 : 1;
+    x = Math.abs(x) / Math.sqrt(2);
+    const t = 1 / (1 + p * x);
+    const y = 1 - (((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t) * Math.exp(-x * x);
+    return 0.5 * (1 + sign * y);
   }
 
-  function bsPrice(S,K,T,r,sigma,type) {
-    if(T<=0) return type==='call'?Math.max(0,S-K):Math.max(0,K-S);
-    const d1=(Math.log(S/K)+(r+0.5*sigma*sigma)*T)/(sigma*Math.sqrt(T));
-    const d2=d1-sigma*Math.sqrt(T);
-    return type==='call'?S*normCDF(d1)-K*Math.exp(-r*T)*normCDF(d2):K*Math.exp(-r*T)*normCDF(-d2)-S*normCDF(-d1);
+  function bsPrice(S, K, T, r, sigma, type) {
+    if (T <= 0) return type === 'call' ? Math.max(0, S - K) : Math.max(0, K - S);
+    const d1 = (Math.log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * Math.sqrt(T));
+    const d2 = d1 - sigma * Math.sqrt(T);
+    return type === 'call'
+      ? S * normCDF(d1) - K * Math.exp(-r * T) * normCDF(d2)
+      : K * Math.exp(-r * T) * normCDF(-d2) - S * normCDF(-d1);
   }
 
-  function bsGreeks(S,K,T,r,sigma,type) {
-    if(T<=0) return {delta:type==='call'?(S>K?1:0):(S<K?-1:0),gamma:0,theta:0,vega:0};
-    const d1=(Math.log(S/K)+(r+0.5*sigma*sigma)*T)/(sigma*Math.sqrt(T));
-    const d2=d1-sigma*Math.sqrt(T);
-    const nd1=Math.exp(-d1*d1/2)/Math.sqrt(2*Math.PI);
-    const delta=type==='call'?normCDF(d1):normCDF(d1)-1;
-    const gamma=nd1/(S*sigma*Math.sqrt(T));
-    const theta=type==='call'?(-(S*nd1*sigma)/(2*Math.sqrt(T))-r*K*Math.exp(-r*T)*normCDF(d2))/365:(-(S*nd1*sigma)/(2*Math.sqrt(T))+r*K*Math.exp(-r*T)*normCDF(-d2))/365;
-    const vega=S*nd1*Math.sqrt(T)/100;
-    return {delta,gamma,theta,vega};
+  function bsGreeks(S, K, T, r, sigma, type) {
+    if (T <= 0) return { delta: type === 'call' ? (S > K ? 1 : 0) : (S < K ? -1 : 0), gamma: 0, theta: 0, vega: 0 };
+    const d1 = (Math.log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * Math.sqrt(T));
+    const d2 = d1 - sigma * Math.sqrt(T);
+    const nd1 = Math.exp(-d1 * d1 / 2) / Math.sqrt(2 * Math.PI);
+    const delta = type === 'call' ? normCDF(d1) : normCDF(d1) - 1;
+    const gamma = nd1 / (S * sigma * Math.sqrt(T));
+    const theta = type === 'call'
+      ? (-(S * nd1 * sigma) / (2 * Math.sqrt(T)) - r * K * Math.exp(-r * T) * normCDF(d2)) / 365
+      : (-(S * nd1 * sigma) / (2 * Math.sqrt(T)) + r * K * Math.exp(-r * T) * normCDF(-d2)) / 365;
+    const vega = S * nd1 * Math.sqrt(T) / 100;
+    return { delta, gamma, theta, vega };
   }
 
-  function fmt(n,pre='$') {
-    if(isNaN(n))return'—';
-    const abs=Math.abs(n);
-    const s=abs>=1000?(abs/1000).toFixed(2)+'k':abs.toFixed(2);
-    return (n<0?'-':'')+pre+s;
+  function fmt(n, pre = '$', signed = false) {
+    if (!Number.isFinite(n)) return '—';
+    const abs = Math.abs(n);
+    const s = abs >= 1000000 ? (abs / 1000000).toFixed(2) + 'M' : abs >= 1000 ? (abs / 1000).toFixed(2) + 'k' : abs.toFixed(2);
+    const sign = signed ? (n > 0 ? '+' : n < 0 ? '-' : '') : (n < 0 ? '-' : '');
+    return sign + pre + s;
   }
 
-  function setType(t) {
-    optionType=t;
-    document.getElementById('btn-call').className='type-btn'+(t==='call'?' active-call':'');
-    document.getElementById('btn-put').className='type-btn'+(t==='put'?' active-put':'');
+  function resolveStrike(token, K, W) {
+    if (token === 'K') return K;
+    if (token === 'K+W') return K + W;
+    if (token === 'K-W') return Math.max(1, K - W);
+    if (token === 'K+2W') return K + 2 * W;
+    if (token === 'K-2W') return Math.max(1, K - 2 * W);
+    return K;
+  }
+
+  function buildLegs(strategyId, K, W) {
+    const def = strategyCatalog[strategyId] || strategyCatalog.long_call;
+    return def.legs.map(leg => ({
+      ...leg,
+      strike: leg.kind === 'option' ? resolveStrike(leg.strike, K, W) : null
+    }));
+  }
+
+  function legValue(leg, spot, T, r, sigma, units) {
+    const qty = (leg.qty || 1) * (units || 1);
+    if (leg.kind === 'stock') return leg.side * qty * spot;
+    return leg.side * qty * 100 * bsPrice(spot, leg.strike, T, r, sigma, leg.optionType);
+  }
+
+  function legPayoff(leg, spot, units) {
+    const qty = (leg.qty || 1) * (units || 1);
+    if (leg.kind === 'stock') return leg.side * qty * spot;
+    const intrinsic = leg.optionType === 'call' ? Math.max(0, spot - leg.strike) : Math.max(0, leg.strike - spot);
+    return leg.side * qty * 100 * intrinsic;
+  }
+
+  function legGreeks(leg, spot, T, r, sigma, units) {
+    const qty = (leg.qty || 1) * (units || 1);
+    if (leg.kind === 'stock') return { delta: leg.side * qty * 100, gamma: 0, theta: 0, vega: 0 };
+    const g = bsGreeks(spot, leg.strike, T, r, sigma, leg.optionType);
+    const scale = leg.side * qty * 100;
+    return {
+      delta: g.delta * scale,
+      gamma: g.gamma * scale,
+      theta: g.theta * scale,
+      vega: g.vega * scale
+    };
+  }
+
+  function strategyOpeningValue(legs, spot, T, r, sigma, units) {
+    return legs.reduce((sum, leg) => sum + legValue(leg, spot, T, r, sigma, units), 0);
+  }
+
+  function strategyPayoff(legs, spot, units) {
+    return legs.reduce((sum, leg) => sum + legPayoff(leg, spot, units), 0);
+  }
+
+  function strategyPnl(legs, openSpot, expirySpot, T, r, sigma, units) {
+    return strategyPayoff(legs, expirySpot, units) - strategyOpeningValue(legs, openSpot, T, r, sigma, units);
+  }
+
+  function strategyGreeks(legs, spot, T, r, sigma, units) {
+    return legs.reduce((sum, leg) => {
+      const g = legGreeks(leg, spot, T, r, sigma, units);
+      return {
+        delta: sum.delta + g.delta,
+        gamma: sum.gamma + g.gamma,
+        theta: sum.theta + g.theta,
+        vega: sum.vega + g.vega
+      };
+    }, { delta: 0, gamma: 0, theta: 0, vega: 0 });
+  }
+
+  function formatLimit(value) {
+    if (value === Infinity) return 'Unlimited';
+    return fmt(value);
+  }
+
+  function strategyExtremes(strategyId, openingValue, K, W) {
+    switch (strategyId) {
+      case 'long_call': return { maxProfit: Infinity, maxLoss: openingValue };
+      case 'long_put': return { maxProfit: K * 100 - openingValue, maxLoss: openingValue };
+      case 'short_call': return { maxProfit: -openingValue, maxLoss: Infinity };
+      case 'short_put': return { maxProfit: -openingValue, maxLoss: K * 100 + openingValue };
+      case 'bull_call_spread': return { maxProfit: W * 100 - openingValue, maxLoss: openingValue };
+      case 'bear_put_spread': return { maxProfit: W * 100 - openingValue, maxLoss: openingValue };
+      case 'bull_put_spread': return { maxProfit: -openingValue, maxLoss: W * 100 + openingValue };
+      case 'bear_call_spread': return { maxProfit: -openingValue, maxLoss: W * 100 + openingValue };
+      case 'long_straddle': return { maxProfit: Infinity, maxLoss: openingValue };
+      case 'short_straddle': return { maxProfit: -openingValue, maxLoss: Infinity };
+      case 'long_strangle': return { maxProfit: Infinity, maxLoss: openingValue };
+      case 'short_strangle': return { maxProfit: -openingValue, maxLoss: Infinity };
+      case 'iron_condor': return { maxProfit: -openingValue, maxLoss: W * 100 + openingValue };
+      case 'iron_butterfly': return { maxProfit: -openingValue, maxLoss: W * 100 + openingValue };
+      case 'butterfly_spread': return { maxProfit: W * 100 - openingValue, maxLoss: openingValue };
+      case 'covered_call': return { maxProfit: K * 100 - openingValue, maxLoss: openingValue };
+      case 'protective_put': return { maxProfit: Infinity, maxLoss: openingValue - K * 100 };
+      case 'collar': return { maxProfit: (K + W) * 100 - openingValue, maxLoss: openingValue - Math.max(1, K - W) * 100 };
+      default: return { maxProfit: Infinity, maxLoss: openingValue };
+    }
+  }
+
+  function findBreakevens(legs, openSpot, T, r, sigma, units) {
+    const strikes = legs.filter(leg => leg.kind === 'option').map(leg => leg.strike);
+    const low = Math.max(1, Math.min(openSpot, ...(strikes.length ? strikes : [openSpot])) * 0.4);
+    const high = Math.max(openSpot, ...(strikes.length ? strikes : [openSpot])) * 2.2;
+    const steps = 240;
+    const roots = [];
+    let prevX = low;
+    let prevY = strategyPnl(legs, openSpot, low, T, r, sigma, units);
+    for (let i = 1; i <= steps; i++) {
+      const x = low + (high - low) * (i / steps);
+      const y = strategyPnl(legs, openSpot, x, T, r, sigma, units);
+      if (Math.abs(y) < 0.01) roots.push(x);
+      if (prevY === 0 || y === 0 || (prevY < 0 && y > 0) || (prevY > 0 && y < 0)) {
+        const denom = prevY - y;
+        const root = denom === 0 ? x : prevX + (x - prevX) * (prevY / denom);
+        roots.push(root);
+      }
+      prevX = x;
+      prevY = y;
+    }
+    return [...new Set(roots.map(v => Math.round(v * 100) / 100))].sort((a, b) => a - b);
+  }
+
+  function setStrategy(strategyId) {
+    selectedStrategy = strategyId;
     update();
   }
 
   function update() {
-    const S=+document.getElementById('sl-spot').value;
-    const K=+document.getElementById('sl-strike').value;
-    const dte=+document.getElementById('sl-dte').value;
-    const iv=+document.getElementById('sl-iv').value/100;
-    const contracts=+document.getElementById('sl-contracts').value;
-    const T=dte/365, r=0.05;
+    const S = +document.getElementById('sl-spot').value;
+    const K = +document.getElementById('sl-strike').value;
+    const W = +document.getElementById('sl-wing').value;
+    const dte = +document.getElementById('sl-dte').value;
+    const iv = +document.getElementById('sl-iv').value / 100;
+    const contracts = +document.getElementById('sl-contracts').value;
+    const T = dte / 365, r = 0.05;
+    const def = strategyCatalog[selectedStrategy] || strategyCatalog.long_call;
+    const legs = buildLegs(selectedStrategy, K, W);
+    const openingValue = strategyOpeningValue(legs, S, T, r, iv, contracts);
+    const expiryAtSpot = strategyPnl(legs, S, S, T, r, iv, contracts);
+    const extremes = strategyExtremes(selectedStrategy, openingValue, K, W);
+    const breakEvens = findBreakevens(legs, S, T, r, iv, contracts);
+    const greeks = strategyGreeks(legs, S, T, r, iv, contracts);
 
-    document.getElementById('out-spot').textContent='$'+S;
-    document.getElementById('out-strike').textContent='$'+K;
-    document.getElementById('out-dte').textContent=dte+'d';
-    document.getElementById('out-iv').textContent=(iv*100).toFixed(0)+'%';
-    document.getElementById('out-contracts').textContent=contracts;
+    document.getElementById('strategy-select').value = selectedStrategy;
+    document.getElementById('strategy-desc').textContent = def.description;
+    document.getElementById('out-spot').textContent = '$' + S;
+    document.getElementById('out-strike').textContent = '$' + K;
+    document.getElementById('out-wing').textContent = W;
+    document.getElementById('out-dte').textContent = dte + 'd';
+    document.getElementById('out-iv').textContent = (iv * 100).toFixed(0) + '%';
+    document.getElementById('out-contracts').textContent = contracts;
 
-    const prem=bsPrice(S,K,T,r,iv,optionType);
-    const cost=prem*100*contracts;
-    const be=optionType==='call'?K+prem:K-prem;
-    const curPnl=optionType==='call'?(Math.max(0,S-K)-prem)*100*contracts:(Math.max(0,K-S)-prem)*100*contracts;
+    const hdrChange = ((S - K) / K) * 100;
+    document.getElementById('hdr-price').textContent = '$' + S.toFixed(2);
+    document.getElementById('hdr-change').textContent = (hdrChange >= 0 ? '+' : '') + hdrChange.toFixed(2) + '%';
+    document.getElementById('hdr-change').style.color = hdrChange >= 0 ? 'var(--green)' : 'var(--red)';
 
-    document.getElementById('m-premium').textContent='$'+prem.toFixed(2);
-    document.getElementById('m-cost').textContent=fmt(cost);
-    document.getElementById('m-breakeven').textContent='$'+be.toFixed(2);
-    document.getElementById('be-strip').textContent='$'+be.toFixed(2);
-    const pnlEl=document.getElementById('m-pnl');
-    pnlEl.textContent=(curPnl>=0?'+':'')+fmt(curPnl);
-    pnlEl.style.color=curPnl>=0?'var(--green)':'var(--red)';
+    document.getElementById('m-premium').textContent = fmt(openingValue, '$', true);
+    document.getElementById('m-cost').textContent = formatLimit(extremes.maxProfit);
+    document.getElementById('m-breakeven').textContent = formatLimit(extremes.maxLoss);
+    document.getElementById('be-strip').textContent = breakEvens.length ? breakEvens.map(v => '$' + v.toFixed(2)).join(' / ') : 'No break-even';
+    const pnlEl = document.getElementById('m-pnl');
+    pnlEl.textContent = fmt(expiryAtSpot, '$', true);
+    pnlEl.style.color = expiryAtSpot >= 0 ? 'var(--green)' : 'var(--red)';
 
-    const greeks=bsGreeks(S,K,T,r,iv,optionType);
-    document.getElementById('greeks-grid').innerHTML=[
-      ['Δ Delta',greeks.delta.toFixed(3),'Price sensitivity'],
-      ['Γ Gamma',greeks.gamma.toFixed(4),'Delta change'],
-      ['Θ Theta',greeks.theta.toFixed(3),'Daily decay'],
-      ['V Vega',greeks.vega.toFixed(3),'Vol sensitivity'],
-    ].map(([n,v,d])=>`<div class="greek-item"><div class="greek-name">${n}</div><div class="greek-val">${v}</div><div class="greek-desc">${d}</div></div>`).join('');
+    document.getElementById('greeks-grid').innerHTML = [
+      ['Δ Delta', greeks.delta.toFixed(3), 'Directional exposure'],
+      ['Γ Gamma', greeks.gamma.toFixed(4), 'Delta change'],
+      ['Θ Theta', greeks.theta.toFixed(3), 'Daily decay'],
+      ['V Vega', greeks.vega.toFixed(3), 'Vol sensitivity']
+    ].map(([n, v, d]) => `<div class="greek-item"><div class="greek-name">${n}</div><div class="greek-val">${v}</div><div class="greek-desc">${d}</div></div>`).join('');
 
-    const scens=[
-      {l:'Bear −15%',p:+(S*0.85).toFixed(0)},
-      {l:'Slight drop −5%',p:+(S*0.95).toFixed(0)},
-      {l:'Flat 0%',p:S},
-      {l:'Rally +5%',p:+(S*1.05).toFixed(0)},
-      {l:'Bull +15%',p:+(S*1.15).toFixed(0)},
+    const scens = [
+      { l: 'Bear −15%', p: +(S * 0.85).toFixed(0) },
+      { l: 'Slight drop −5%', p: +(S * 0.95).toFixed(0) },
+      { l: 'Flat 0%', p: S },
+      { l: 'Rally +5%', p: +(S * 1.05).toFixed(0) },
+      { l: 'Bull +15%', p: +(S * 1.15).toFixed(0) }
     ];
-    document.getElementById('scenarios').innerHTML=scens.map(sc=>{
-      const ev=optionType==='call'?Math.max(0,sc.p-K):Math.max(0,K-sc.p);
-      const pnl=(ev-prem)*100*contracts;
-      const pct=prem>0?((ev/prem)-1)*100:0;
-      const cls=pnl>0?'pnl-pos':pnl<0?'pnl-neg':'pnl-zero';
-      const sg=pnl>=0?'+':'';
-      return`<div class="scenario-row"><span class="scenario-label">${sc.l}</span><span class="scenario-price">$${sc.p}</span><span class="scenario-pnl ${cls}">${sg}${fmt(pnl)} (${sg}${pct.toFixed(0)}%)</span></div>`;
+    document.getElementById('scenarios').innerHTML = scens.map(sc => {
+      const pnl = strategyPnl(legs, S, sc.p, T, r, iv, contracts);
+      const cls = pnl > 0 ? 'pnl-pos' : pnl < 0 ? 'pnl-neg' : 'pnl-zero';
+      const sg = pnl >= 0 ? '+' : '';
+      return `<div class="scenario-row"><span class="scenario-label">${sc.l}</span><span class="scenario-price">$${sc.p}</span><span class="scenario-pnl ${cls}">${sg}${fmt(pnl)}</span></div>`;
     }).join('');
 
-    drawPL(S,K,prem,contracts,be);
-    drawRisk(S,K,T,r,iv,prem,contracts);
+    drawPL(legs, S, K, W, T, r, iv, contracts);
+    drawRisk(legs, S, K, W, T, r, iv, contracts);
   }
 
-  function drawPL(S,K,prem,contracts,be) {
-    const lo=Math.max(100,K*0.6),hi=K*1.5,step=(hi-lo)/60;
-    const prices=[],pnls=[];
-    for(let p=lo;p<=hi;p+=step){
-      prices.push(+p.toFixed(0));
-      const ev=optionType==='call'?Math.max(0,p-K):Math.max(0,K-p);
-      pnls.push(+((ev-prem)*100*contracts).toFixed(2));
+  function drawPL(legs, S, K, W, T, r, iv, contracts) {
+    const strikes = legs.filter(leg => leg.kind === 'option').map(leg => leg.strike);
+    const low = Math.max(1, Math.min(S, ...(strikes.length ? strikes : [S])) * 0.45);
+    const high = Math.max(S, ...(strikes.length ? strikes : [S])) * 2.1;
+    const steps = 80;
+    const labels = [], values = [];
+    for (let i = 0; i <= steps; i++) {
+      const x = low + (high - low) * (i / steps);
+      labels.push(+x.toFixed(0));
+      values.push(+strategyPnl(legs, S, x, T, r, iv, contracts).toFixed(2));
     }
-    if(plChart){plChart.destroy();plChart=null;}
-    const ctx=document.getElementById('plChart').getContext('2d');
-    plChart=new Chart(ctx,{
-      type:'line',
-      data:{labels:prices,datasets:[{
-        data:pnls,
-        segment:{borderColor:c=>c.p1.parsed.y>=0?'#00e5a0':'#ff4d6d'},
-        pointRadius:0,borderWidth:2,tension:0,fill:false
-      }]},
-      options:{
-        responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},tooltip:{
-          backgroundColor:'#181b20',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,
-          titleColor:'#6b7280',bodyColor:'#e8eaf0',
-          titleFont:{family:'Geist Mono',size:11},bodyFont:{family:'Geist Mono',size:12},
-          callbacks:{title:i=>'TSLA $'+i[0].label,label:i=>(i.raw>=0?'+':'')+fmt(i.raw)}
-        }},
-        scales:{
-          x:{ticks:{maxTicksLimit:8,color:'#6b7280',font:{family:'Geist Mono',size:10},callback:(v,i)=>i%8===0?'$'+prices[i]:''},grid:{color:'rgba(255,255,255,0.04)'},border:{color:'rgba(255,255,255,0.07)'}},
-          y:{ticks:{color:'#6b7280',font:{family:'Geist Mono',size:10},callback:v=>(v>=0?'+':'')+fmt(v)},grid:{color:'rgba(255,255,255,0.04)'},border:{color:'rgba(255,255,255,0.07)'}}
+    if (plChart) plChart.destroy();
+    const ctx = document.getElementById('plChart').getContext('2d');
+    plChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets: [{ data: values, segment: { borderColor: c => c.p1.parsed.y >= 0 ? '#00e5a0' : '#ff4d6d' }, pointRadius: 0, borderWidth: 2, tension: 0, fill: false }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: {
+          backgroundColor: '#181b20', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
+          titleColor: '#6b7280', bodyColor: '#e8eaf0',
+          titleFont: { family: 'Geist Mono', size: 11 }, bodyFont: { family: 'Geist Mono', size: 12 },
+          callbacks: { title: i => 'TSLA $' + i[0].label, label: i => (i.raw >= 0 ? '+' : '') + fmt(i.raw) }
+        } },
+        scales: {
+          x: { ticks: { maxTicksLimit: 8, color: '#6b7280', font: { family: 'Geist Mono', size: 10 }, callback: (v, i) => i % 8 === 0 ? '$' + labels[i] : '' }, grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'rgba(255,255,255,0.07)' } },
+          y: { ticks: { color: '#6b7280', font: { family: 'Geist Mono', size: 10 }, callback: v => (v >= 0 ? '+' : '') + fmt(v) }, grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'rgba(255,255,255,0.07)' } }
         }
       }
     });
   }
 
-  function drawRisk(S,K,T,r,iv,prem,contracts) {
-    const lo=Math.max(100,K*0.7),hi=K*1.4,step=(hi-lo)/30;
-    const prices=[],vals=[];
-    for(let p=lo;p<=hi;p+=step){
-      prices.push(+p.toFixed(0));
-      vals.push(+(bsPrice(p,K,T,r,iv,optionType)*100*contracts).toFixed(2));
+  function drawRisk(legs, S, K, W, T, r, iv, contracts) {
+    const strikes = legs.filter(leg => leg.kind === 'option').map(leg => leg.strike);
+    const low = Math.max(1, Math.min(S, ...(strikes.length ? strikes : [S])) * 0.45);
+    const high = Math.max(S, ...(strikes.length ? strikes : [S])) * 2.1;
+    const steps = 60;
+    const labels = [], values = [];
+    for (let i = 0; i <= steps; i++) {
+      const x = low + (high - low) * (i / steps);
+      labels.push(+x.toFixed(0));
+      values.push(+strategyOpeningValue(legs, x, T, r, iv, contracts).toFixed(2));
     }
-    if(riskChart){riskChart.destroy();riskChart=null;}
-    const ctx=document.getElementById('riskChart').getContext('2d');
-    riskChart=new Chart(ctx,{
-      type:'line',
-      data:{labels:prices,datasets:[{
-        label:'Option value',data:vals,
-        borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.06)',
-        pointRadius:0,borderWidth:1.5,tension:0.3,fill:true
-      }]},
-      options:{
-        responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},tooltip:{
-          backgroundColor:'#181b20',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,
-          titleColor:'#6b7280',bodyColor:'#e8eaf0',
-          titleFont:{family:'Geist Mono',size:11},bodyFont:{family:'Geist Mono',size:12},
-          callbacks:{title:i=>'TSLA $'+i[0].label,label:i=>'Value: '+fmt(i.raw)}
-        }},
-        scales:{
-          x:{ticks:{maxTicksLimit:6,color:'#6b7280',font:{family:'Geist Mono',size:10},callback:(v,i)=>i%5===0?'$'+prices[i]:''},grid:{color:'rgba(255,255,255,0.04)'},border:{color:'rgba(255,255,255,0.07)'}},
-          y:{ticks:{color:'#6b7280',font:{family:'Geist Mono',size:10},callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,0.04)'},border:{color:'rgba(255,255,255,0.07)'}}
+    if (riskChart) riskChart.destroy();
+    const ctx = document.getElementById('riskChart').getContext('2d');
+    riskChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets: [{ label: 'Strategy value', data: values, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.06)', pointRadius: 0, borderWidth: 1.5, tension: 0.3, fill: true }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: {
+          backgroundColor: '#181b20', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
+          titleColor: '#6b7280', bodyColor: '#e8eaf0',
+          titleFont: { family: 'Geist Mono', size: 11 }, bodyFont: { family: 'Geist Mono', size: 12 },
+          callbacks: { title: i => 'TSLA $' + i[0].label, label: i => 'Value: ' + fmt(i.raw) }
+        } },
+        scales: {
+          x: { ticks: { maxTicksLimit: 6, color: '#6b7280', font: { family: 'Geist Mono', size: 10 }, callback: (v, i) => i % 5 === 0 ? '$' + labels[i] : '' }, grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'rgba(255,255,255,0.07)' } },
+          y: { ticks: { color: '#6b7280', font: { family: 'Geist Mono', size: 10 }, callback: v => fmt(v) }, grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'rgba(255,255,255,0.07)' } }
         }
       }
     });
   }
 
-  const typeLabels={buy_call:'Buy call',buy_put:'Buy put',sell_call:'Sell call',take_profit:'Take profit',stop_loss:'Stop loss'};
-  const condLabels={above:'price >',below:'price <',pnl_loss:'P&L loss >',pnl_gain:'P&L gain >'};
+  const typeLabels = { buy_call: 'Buy call', buy_put: 'Buy put', sell_call: 'Sell call', take_profit: 'Take profit', stop_loss: 'Stop loss' };
+  const condLabels = { above: 'price >', below: 'price <', pnl_loss: 'P&L loss >', pnl_gain: 'P&L gain >' };
 
   function addAlert() {
-    const type=document.getElementById('al-type').value;
-    const cond=document.getElementById('al-cond').value;
-    const val=parseFloat(document.getElementById('al-val').value);
-    if(isNaN(val)) return;
-    alerts.push({id:Date.now(),type,cond,val});
+    const type = document.getElementById('al-type').value;
+    const cond = document.getElementById('al-cond').value;
+    const val = parseFloat(document.getElementById('al-val').value);
+    if (isNaN(val)) return;
+    alerts.push({ id: Date.now(), type, cond, val });
     renderAlerts();
-    document.getElementById('al-val').value='';
+    document.getElementById('al-val').value = '';
   }
 
   function renderAlerts() {
-    const el=document.getElementById('alert-list');
-    if(!alerts.length){el.innerHTML='<div style="font-family:var(--mono);font-size:11px;color:var(--hint);padding:8px 0">No alerts set. Configure one above.</div>';return;}
-    el.innerHTML=alerts.map(a=>`
+    const el = document.getElementById('alert-list');
+    if (!alerts.length) {
+      el.innerHTML = '<div style="font-family:var(--mono);font-size:11px;color:var(--hint);padding:8px 0">No alerts set. Configure one above.</div>';
+      return;
+    }
+    el.innerHTML = alerts.map(a => `
       <div class="alert-item">
         <div>
           <div class="alert-info">${typeLabels[a.type]} · TSLA</div>
@@ -544,7 +727,7 @@
   }
 
   function removeAlert(id) {
-    alerts=alerts.filter(a=>a.id!==id);
+    alerts = alerts.filter(a => a.id !== id);
     renderAlerts();
   }
 
@@ -552,3 +735,4 @@
 </script>
 </body>
 </html>
+
