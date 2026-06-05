@@ -13,21 +13,21 @@
       "id": "options-chain",
       "title": "Options chain view",
       "priority": 2,
-      "status": "planned",
+      "status": "done",
       "notes": "Show expirations, strikes, bids/asks, volume, open interest, and greeks in one view."
     },
     {
       "id": "strategy-presets",
       "title": "Strategy presets",
       "priority": 3,
-      "status": "planned",
+      "status": "done",
       "notes": "Save common setups like bullish, bearish, income, and volatility presets for faster reuse."
     },
     {
       "id": "profit-targets",
       "title": "Smart alert rules",
       "priority": 4,
-      "status": "planned",
+      "status": "in progress",
       "notes": "Alert on price, premium, delta, P&L, and time-to-expiry thresholds."
     },
     {

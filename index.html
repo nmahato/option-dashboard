@@ -164,6 +164,13 @@
     font-size: 11px; color: var(--hint); margin-top: 8px;
     padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface2);
   }
+  .preset-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 10px; }
+  .preset-btn {
+    background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px;
+    color: var(--text); font-family: var(--mono); font-size: 10px; padding: 8px 10px;
+    cursor: pointer; text-align: left; transition: all 0.15s;
+  }
+  .preset-btn:hover { border-color: var(--accent); transform: translateY(-1px); }
   .add-alert-btn {
     background: var(--green-dim); border: 1px solid var(--green); border-radius: 6px;
     color: var(--green); font-family: var(--mono); font-size: 11px; font-weight: 500;
@@ -199,6 +206,34 @@
   }
   .wishlist-notes { font-size: 11px; color: var(--hint); margin-top: 6px; }
   .wishlist-empty { font-family: var(--mono); font-size: 11px; color: var(--hint); padding: 8px 0; }
+
+  .chain-section {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem;
+  }
+  .chain-meta {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    margin-bottom: 12px; flex-wrap: wrap;
+  }
+  .chain-note { font-size: 11px; color: var(--hint); }
+  .chain-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+  table.chain-table { width: 100%; border-collapse: collapse; min-width: 760px; }
+  .chain-table th, .chain-table td {
+    padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left;
+    font-family: var(--mono); font-size: 11px; white-space: nowrap;
+  }
+  .chain-table th { color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; background: rgba(255,255,255,0.02); }
+  .chain-table td { color: var(--text); }
+  .chain-row-current { background: rgba(0,229,160,0.05); }
+  .chain-pill { font-size: 10px; padding: 2px 6px; border-radius: 999px; border: 1px solid var(--border2); color: var(--muted); }
+  .chain-positive { color: var(--green); }
+  .chain-negative { color: var(--red); }
+  .chain-muted { color: var(--muted); }
+  .quick-alerts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .quick-alert-btn {
+    background: transparent; border: 1px solid var(--border2); border-radius: 999px;
+    color: var(--text); font-family: var(--mono); font-size: 10px; padding: 5px 10px; cursor: pointer;
+  }
+  .quick-alert-btn:hover { border-color: var(--accent); color: var(--accent); }
 
   .footer {
     border-top: 1px solid var(--border); padding: 12px 2rem;
@@ -264,6 +299,12 @@
         </select>
       </div>
       <p class="strategy-desc" id="strategy-desc"></p>
+      <div class="preset-grid" id="preset-grid">
+        <button class="preset-btn" type="button" onclick="applyPreset('bullish')">Bullish preset</button>
+        <button class="preset-btn" type="button" onclick="applyPreset('bearish')">Bearish preset</button>
+        <button class="preset-btn" type="button" onclick="applyPreset('income')">Income preset</button>
+        <button class="preset-btn" type="button" onclick="applyPreset('volatility')">Volatility preset</button>
+      </div>
     </div>
     <div>
       <p class="section-title">Parameters</p>
@@ -353,6 +394,32 @@
       </div>
     </div>
 
+    <div class="chain-section">
+      <div class="chain-meta">
+        <div>
+          <p class="section-title">Options chain snapshot</p>
+          <div class="chain-note">Model-generated chain around the selected strike. Use it to compare nearby call and put pricing quickly.</div>
+        </div>
+        <span class="chain-pill" id="chain-pill">Model chain</span>
+      </div>
+      <div class="chain-table-wrap">
+        <table class="chain-table" aria-label="Options chain snapshot">
+          <thead>
+            <tr>
+              <th>Strike</th>
+              <th>Call mid</th>
+              <th>Call Δ</th>
+              <th>Call θ</th>
+              <th>Put mid</th>
+              <th>Put Δ</th>
+              <th>Put θ</th>
+            </tr>
+          </thead>
+          <tbody id="chain-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="alerts-section">
       <p class="section-title">Alert system</p>
       <div class="alert-form">
@@ -381,6 +448,13 @@
         </div>
         <button class="add-alert-btn" onclick="addAlert()">+ ADD ALERT</button>
       </div>
+      <div class="quick-alerts">
+        <button class="quick-alert-btn" type="button" onclick="setQuickAlert('above_spot')">Above spot</button>
+        <button class="quick-alert-btn" type="button" onclick="setQuickAlert('below_spot')">Below spot</button>
+        <button class="quick-alert-btn" type="button" onclick="setQuickAlert('breakeven')">At breakeven</button>
+        <button class="quick-alert-btn" type="button" onclick="setQuickAlert('profit_target')">Profit target</button>
+        <button class="quick-alert-btn" type="button" onclick="setQuickAlert('loss_limit')">Loss limit</button>
+      </div>
       <div class="alert-list" id="alert-list">
         <div style="font-family:var(--mono);font-size:11px;color:var(--hint);padding:8px 0">No alerts set. Configure one above.</div>
       </div>
@@ -407,12 +481,19 @@
 
   const fallbackWishlist = [
     { id: 'live-market-data', title: 'Live market data', priority: 1, status: 'planned', notes: 'Pull live TSLA price, volume, and IV instead of using static slider inputs.' },
-    { id: 'options-chain', title: 'Options chain view', priority: 2, status: 'planned', notes: 'Show expirations, strikes, bids/asks, volume, open interest, and greeks in one view.' },
-    { id: 'strategy-presets', title: 'Strategy presets', priority: 3, status: 'planned', notes: 'Save common setups like bullish, bearish, income, and volatility presets for faster reuse.' },
-    { id: 'profit-targets', title: 'Smart alert rules', priority: 4, status: 'planned', notes: 'Alert on price, premium, delta, P&L, and time-to-expiry thresholds.' },
+    { id: 'options-chain', title: 'Options chain view', priority: 2, status: 'done', notes: 'Show expirations, strikes, bids/asks, volume, open interest, and greeks in one view.' },
+    { id: 'strategy-presets', title: 'Strategy presets', priority: 3, status: 'done', notes: 'Save common setups like bullish, bearish, income, and volatility presets for faster reuse.' },
+    { id: 'profit-targets', title: 'Smart alert rules', priority: 4, status: 'in progress', notes: 'Alert on price, premium, delta, P&L, and time-to-expiry thresholds.' },
     { id: 'export-share', title: 'Export and share', priority: 5, status: 'planned', notes: 'Export strategy snapshots as a shareable image or JSON summary.' },
     { id: 'mobile-polish', title: 'Mobile polish', priority: 6, status: 'planned', notes: 'Improve touch controls, spacing, and chart readability on smaller screens.' }
   ];
+
+  const presetCatalog = {
+    bullish: { strategy: 'bull_call_spread', spotOffset: 0, strikeOffset: 0, wing: 20, dte: 30, iv: 55, contracts: 1 },
+    bearish: { strategy: 'bear_put_spread', spotOffset: 0, strikeOffset: 0, wing: 20, dte: 30, iv: 60, contracts: 1 },
+    income: { strategy: 'iron_condor', spotOffset: 0, strikeOffset: 0, wing: 15, dte: 21, iv: 50, contracts: 1 },
+    volatility: { strategy: 'long_straddle', spotOffset: 0, strikeOffset: 0, wing: 10, dte: 14, iv: 90, contracts: 1 }
+  };
 
   const strategyCatalog = {
     long_call: { label: 'Long call', description: 'Directional bullish exposure with limited downside.', legs: [{ kind: 'option', optionType: 'call', side: 1, strike: 'K', qty: 1 }] },
@@ -611,6 +692,93 @@
     update();
   }
 
+  function applyPreset(presetId) {
+    const preset = presetCatalog[presetId];
+    if (!preset) return;
+    selectedStrategy = preset.strategy;
+    const spotEl = document.getElementById('sl-spot');
+    const strikeEl = document.getElementById('sl-strike');
+    const wingEl = document.getElementById('sl-wing');
+    const dteEl = document.getElementById('sl-dte');
+    const ivEl = document.getElementById('sl-iv');
+    const contractsEl = document.getElementById('sl-contracts');
+    const currentSpot = +spotEl.value;
+    spotEl.value = Math.max(300, Math.min(600, currentSpot + preset.spotOffset));
+    strikeEl.value = Math.round((+spotEl.value + preset.strikeOffset) / 5) * 5;
+    wingEl.value = preset.wing;
+    dteEl.value = preset.dte;
+    ivEl.value = preset.iv;
+    contractsEl.value = preset.contracts;
+    update();
+  }
+
+  function buildChainRows(S, K, W, T, r, sigma) {
+    const strikes = [...new Set([K - 2 * W, K - W, K, K + W, K + 2 * W])].filter(v => v >= 5).sort((a, b) => a - b);
+    return strikes.map(strike => {
+      const callPrice = bsPrice(S, strike, T, r, sigma, 'call');
+      const putPrice = bsPrice(S, strike, T, r, sigma, 'put');
+      const callDelta = bsGreeks(S, strike, T, r, sigma, 'call').delta;
+      const putDelta = bsGreeks(S, strike, T, r, sigma, 'put').delta;
+      const callTheta = bsGreeks(S, strike, T, r, sigma, 'call').theta;
+      const putTheta = bsGreeks(S, strike, T, r, sigma, 'put').theta;
+      return { strike, callPrice, putPrice, callDelta, putDelta, callTheta, putTheta, current: strike === K };
+    });
+  }
+
+  function renderChain(S, K, W, T, r, sigma) {
+    const body = document.getElementById('chain-table-body');
+    const rows = buildChainRows(S, K, W, T, r, sigma);
+    document.getElementById('chain-pill').textContent = `${rows.length} strikes • K ${K}`;
+    body.innerHTML = rows.map(row => `
+      <tr class="${row.current ? 'chain-row-current' : ''}">
+        <td><span class="chain-pill">${row.current ? 'ATM' : 'O.T.M.'}</span> $${row.strike}</td>
+        <td class="${row.callPrice >= 1 ? 'chain-positive' : 'chain-muted'}">${fmt(row.callPrice)}</td>
+        <td class="${row.callDelta >= 0 ? 'chain-positive' : 'chain-negative'}">${row.callDelta.toFixed(3)}</td>
+        <td class="${row.callTheta <= 0 ? 'chain-negative' : 'chain-positive'}">${row.callTheta.toFixed(3)}</td>
+        <td class="${row.putPrice >= 1 ? 'chain-positive' : 'chain-muted'}">${fmt(row.putPrice)}</td>
+        <td class="${row.putDelta >= 0 ? 'chain-positive' : 'chain-negative'}">${row.putDelta.toFixed(3)}</td>
+        <td class="${row.putTheta <= 0 ? 'chain-negative' : 'chain-positive'}">${row.putTheta.toFixed(3)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function setQuickAlert(mode) {
+    const S = +document.getElementById('sl-spot').value;
+    const K = +document.getElementById('sl-strike').value;
+    const W = +document.getElementById('sl-wing').value;
+    const dte = +document.getElementById('sl-dte').value;
+    const iv = +document.getElementById('sl-iv').value / 100;
+    const contracts = +document.getElementById('sl-contracts').value;
+    const T = dte / 365, r = 0.05;
+    const legs = buildLegs(selectedStrategy, K, W);
+    const openingValue = Math.abs(strategyOpeningValue(legs, S, T, r, iv, contracts));
+    const typeEl = document.getElementById('al-type');
+    const condEl = document.getElementById('al-cond');
+    const valEl = document.getElementById('al-val');
+
+    if (mode === 'above_spot') {
+      typeEl.value = 'buy_call';
+      condEl.value = 'above';
+      valEl.value = Math.round(S + 5);
+    } else if (mode === 'below_spot') {
+      typeEl.value = 'buy_put';
+      condEl.value = 'below';
+      valEl.value = Math.max(1, Math.round(S - 5));
+    } else if (mode === 'breakeven') {
+      typeEl.value = 'take_profit';
+      condEl.value = 'pnl_gain';
+      valEl.value = Math.max(1, Math.round(openingValue));
+    } else if (mode === 'profit_target') {
+      typeEl.value = 'take_profit';
+      condEl.value = 'pnl_gain';
+      valEl.value = Math.max(1, Math.round(openingValue * 1.5));
+    } else if (mode === 'loss_limit') {
+      typeEl.value = 'stop_loss';
+      condEl.value = 'pnl_loss';
+      valEl.value = Math.max(1, Math.round(openingValue * 0.5));
+    }
+  }
+
   function update() {
     const S = +document.getElementById('sl-spot').value;
     const K = +document.getElementById('sl-strike').value;
@@ -670,6 +838,7 @@
       return `<div class="scenario-row"><span class="scenario-label">${sc.l}</span><span class="scenario-price">$${sc.p}</span><span class="scenario-pnl ${cls}">${sg}${fmt(pnl)}</span></div>`;
     }).join('');
 
+    renderChain(S, K, W, T, r, iv);
     drawPL(legs, S, K, W, T, r, iv, contracts);
     drawRisk(legs, S, K, W, T, r, iv, contracts);
   }
