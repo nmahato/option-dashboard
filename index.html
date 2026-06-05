@@ -167,6 +167,36 @@
   }
 
   .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .pulse-card {
+    background: linear-gradient(135deg, rgba(0,229,160,0.08), rgba(59,130,246,0.06) 42%, rgba(24,27,32,0.96) 100%);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 18px;
+    padding: 1rem 1.1rem;
+    box-shadow: var(--shadow-soft);
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .pulse-copy { min-width: 220px; }
+  .pulse-kicker { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .pulse-title { font-size: 18px; font-weight: 500; color: var(--text); line-height: 1.2; }
+  .pulse-sub { font-size: 12px; color: var(--hint); margin-top: 4px; }
+  .pulse-stats { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pulse-stat {
+    min-width: 112px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+  .pulse-stat-label { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 3px; }
+  .pulse-stat-value { font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--text); }
+  .pulse-stat-value.positive { color: var(--green); }
+  .pulse-stat-value.negative { color: var(--red); }
+  .pulse-stat-value.neutral { color: var(--amber); }
+  .pulse-stat-note { font-size: 10px; color: var(--hint); margin-top: 2px; }
   .metric-card {
     background: linear-gradient(180deg, rgba(24,27,32,0.95), rgba(17,19,23,0.95));
     border: 1px solid rgba(255,255,255,0.07);
@@ -524,6 +554,36 @@
         <div class="metric-label">P&L at spot</div>
         <div class="metric-val" id="m-pnl">—</div>
         <div class="metric-sub">if it expired now</div>
+      </div>
+    </div>
+
+    <div class="pulse-card">
+      <div class="pulse-copy">
+        <div class="pulse-kicker">Live market pulse</div>
+        <div class="pulse-title">Nitai list is tracking the top S&amp;P 500 names in real time.</div>
+        <div class="pulse-sub" id="pulse-subtitle">Waiting for the first refresh.</div>
+      </div>
+      <div class="pulse-stats">
+        <div class="pulse-stat">
+          <div class="pulse-stat-label">Advancers</div>
+          <div class="pulse-stat-value positive" id="pulse-up">—</div>
+          <div class="pulse-stat-note">Names above prior close</div>
+        </div>
+        <div class="pulse-stat">
+          <div class="pulse-stat-label">Decliners</div>
+          <div class="pulse-stat-value negative" id="pulse-down">—</div>
+          <div class="pulse-stat-note">Names below prior close</div>
+        </div>
+        <div class="pulse-stat">
+          <div class="pulse-stat-label">Top gainer</div>
+          <div class="pulse-stat-value positive" id="pulse-gainer">—</div>
+          <div class="pulse-stat-note" id="pulse-gainer-note">—</div>
+        </div>
+        <div class="pulse-stat">
+          <div class="pulse-stat-label">Top loser</div>
+          <div class="pulse-stat-value negative" id="pulse-loser">—</div>
+          <div class="pulse-stat-note" id="pulse-loser-note">—</div>
+        </div>
       </div>
     </div>
 
@@ -1203,6 +1263,48 @@
     return { text: `${sign}${diff.toFixed(2)} (${sign}${pct.toFixed(2)}%)`, positive: diff >= 0 };
   }
 
+  function renderMarketPulse() {
+    const quotes = nitaiQuotes.filter(q => Number.isFinite(Number(q.last_trade_price)) && Number.isFinite(Number(q.previous_close)));
+    const subtitle = document.getElementById('pulse-subtitle');
+    const upEl = document.getElementById('pulse-up');
+    const downEl = document.getElementById('pulse-down');
+    const gainerEl = document.getElementById('pulse-gainer');
+    const loserEl = document.getElementById('pulse-loser');
+    const gainerNoteEl = document.getElementById('pulse-gainer-note');
+    const loserNoteEl = document.getElementById('pulse-loser-note');
+    if (!quotes.length) {
+      subtitle.textContent = 'Live quotes will appear after the first refresh.';
+      upEl.textContent = '—';
+      downEl.textContent = '—';
+      gainerEl.textContent = '—';
+      loserEl.textContent = '—';
+      gainerNoteEl.textContent = '—';
+      loserNoteEl.textContent = '—';
+      return;
+    }
+
+    const movers = quotes.map(q => {
+      const last = Number(q.last_trade_price);
+      const prev = Number(q.previous_close);
+      const diff = last - prev;
+      const pct = prev ? (diff / prev) * 100 : 0;
+      return { ...q, diff, pct };
+    });
+    const up = movers.filter(q => q.diff >= 0).length;
+    const down = movers.length - up;
+    const topGainer = movers.reduce((best, cur) => (cur.pct > best.pct ? cur : best), movers[0]);
+    const topLoser = movers.reduce((best, cur) => (cur.pct < best.pct ? cur : best), movers[0]);
+    const avgPct = movers.reduce((sum, q) => sum + q.pct, 0) / movers.length;
+
+    upEl.textContent = String(up);
+    downEl.textContent = String(down);
+    gainerEl.textContent = `${topGainer.symbol} +${topGainer.pct.toFixed(2)}%`;
+    gainerNoteEl.textContent = `$${Number(topGainer.last_trade_price).toFixed(2)} last`;
+    loserEl.textContent = `${topLoser.symbol} ${topLoser.pct >= 0 ? '+' : ''}${topLoser.pct.toFixed(2)}%`;
+    loserNoteEl.textContent = `$${Number(topLoser.last_trade_price).toFixed(2)} last`;
+    subtitle.textContent = `${movers.length} names loaded. Average move: ${avgPct >= 0 ? '+' : ''}${avgPct.toFixed(2)}%.`;
+  }
+
   function renderNitaiSymbols() {
     const el = document.getElementById('symbols-table-body');
     if (!nitaiSymbols.length) {
@@ -1232,6 +1334,7 @@
       `;
     }).join('');
     document.getElementById('symbols-pill').textContent = nitaiQuotes.length ? `Live ${nitaiQuotes.length}` : 'Loading';
+    renderMarketPulse();
   }
 
   async function loadNitaiSymbols() {
