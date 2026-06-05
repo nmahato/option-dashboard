@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $symbolFile = Join-Path $repoRoot 'main\data\nitai_list.json'
-$quoteFile = Join-Path $repoRoot 'main\data\nitai_list_quotes.json'
+$quoteFile = Join-Path $repoRoot 'main\data\nitai_list_quotes.live.json'
 
 function Get-LiveQuotes {
   $symbols = (Get-Content $symbolFile -Raw | ConvertFrom-Json).symbols | ForEach-Object { $_.symbol }

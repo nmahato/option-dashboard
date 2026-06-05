@@ -1252,7 +1252,8 @@
       return;
     }
     try {
-      const res = await fetch('main/data/nitai_list_quotes.json', { cache: 'no-store' });
+      let res = await fetch('main/data/nitai_list_quotes.live.json', { cache: 'no-store' });
+      if (!res.ok) res = await fetch('main/data/nitai_list_quotes.json', { cache: 'no-store' });
       if (!res.ok) throw new Error('quotes cache unavailable');
       const data = await res.json();
       nitaiQuotes = Array.isArray(data.items) ? data.items : [];
