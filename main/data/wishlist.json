@@ -1,0 +1,48 @@
+{
+  "project": "TSLA Options Dashboard",
+  "updated": "2026-06-05",
+  "items": [
+    {
+      "id": "live-market-data",
+      "title": "Live market data",
+      "priority": 1,
+      "status": "planned",
+      "notes": "Pull live TSLA price, volume, and IV instead of using static slider inputs."
+    },
+    {
+      "id": "options-chain",
+      "title": "Options chain view",
+      "priority": 2,
+      "status": "planned",
+      "notes": "Show expirations, strikes, bids/asks, volume, open interest, and greeks in one view."
+    },
+    {
+      "id": "strategy-presets",
+      "title": "Strategy presets",
+      "priority": 3,
+      "status": "planned",
+      "notes": "Save common setups like bullish, bearish, income, and volatility presets for faster reuse."
+    },
+    {
+      "id": "profit-targets",
+      "title": "Smart alert rules",
+      "priority": 4,
+      "status": "planned",
+      "notes": "Alert on price, premium, delta, P&L, and time-to-expiry thresholds."
+    },
+    {
+      "id": "export-share",
+      "title": "Export and share",
+      "priority": 5,
+      "status": "planned",
+      "notes": "Export strategy snapshots as a shareable image or JSON summary."
+    },
+    {
+      "id": "mobile-polish",
+      "title": "Mobile polish",
+      "priority": 6,
+      "status": "planned",
+      "notes": "Improve touch controls, spacing, and chart readability on smaller screens."
+    }
+  ]
+}

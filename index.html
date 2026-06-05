@@ -183,6 +183,23 @@
   .del-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; line-height: 1; padding: 2px 4px; }
   .del-btn:hover { color: var(--red); }
 
+  .wishlist-section {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem;
+  }
+  .wishlist-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .wishlist-item {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+  }
+  .wishlist-top { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .wishlist-title { font-family: var(--mono); font-size: 12px; color: var(--text); }
+  .wishlist-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+  .wishlist-pill {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 2px 6px; border-radius: 999px; border: 1px solid var(--border2); color: var(--muted);
+  }
+  .wishlist-notes { font-size: 11px; color: var(--hint); margin-top: 6px; }
+  .wishlist-empty { font-family: var(--mono); font-size: 11px; color: var(--hint); padding: 8px 0; }
+
   .footer {
     border-top: 1px solid var(--border); padding: 12px 2rem;
     display: flex; justify-content: space-between; align-items: center;
@@ -368,6 +385,13 @@
         <div style="font-family:var(--mono);font-size:11px;color:var(--hint);padding:8px 0">No alerts set. Configure one above.</div>
       </div>
     </div>
+
+    <div class="wishlist-section">
+      <p class="section-title">Wishlist</p>
+      <div class="wishlist-list" id="wishlist-list">
+        <div class="wishlist-empty">Loading wishlist...</div>
+      </div>
+    </div>
   </main>
 </div>
 
@@ -379,6 +403,16 @@
   let selectedStrategy = 'long_call';
   let plChart = null, riskChart = null;
   let alerts = [];
+  let wishlistItems = [];
+
+  const fallbackWishlist = [
+    { id: 'live-market-data', title: 'Live market data', priority: 1, status: 'planned', notes: 'Pull live TSLA price, volume, and IV instead of using static slider inputs.' },
+    { id: 'options-chain', title: 'Options chain view', priority: 2, status: 'planned', notes: 'Show expirations, strikes, bids/asks, volume, open interest, and greeks in one view.' },
+    { id: 'strategy-presets', title: 'Strategy presets', priority: 3, status: 'planned', notes: 'Save common setups like bullish, bearish, income, and volatility presets for faster reuse.' },
+    { id: 'profit-targets', title: 'Smart alert rules', priority: 4, status: 'planned', notes: 'Alert on price, premium, delta, P&L, and time-to-expiry thresholds.' },
+    { id: 'export-share', title: 'Export and share', priority: 5, status: 'planned', notes: 'Export strategy snapshots as a shareable image or JSON summary.' },
+    { id: 'mobile-polish', title: 'Mobile polish', priority: 6, status: 'planned', notes: 'Improve touch controls, spacing, and chart readability on smaller screens.' }
+  ];
 
   const strategyCatalog = {
     long_call: { label: 'Long call', description: 'Directional bullish exposure with limited downside.', legs: [{ kind: 'option', optionType: 'call', side: 1, strike: 'K', qty: 1 }] },
@@ -742,7 +776,40 @@
     renderAlerts();
   }
 
+  async function loadWishlist() {
+    try {
+      const res = await fetch('main/data/wishlist.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error('wishlist unavailable');
+      const data = await res.json();
+      wishlistItems = Array.isArray(data.items) ? data.items : fallbackWishlist;
+    } catch (err) {
+      wishlistItems = fallbackWishlist;
+    }
+    renderWishlist();
+  }
+
+  function renderWishlist() {
+    const el = document.getElementById('wishlist-list');
+    if (!wishlistItems.length) {
+      el.innerHTML = '<div class="wishlist-empty">No wishlist items found.</div>';
+      return;
+    }
+    el.innerHTML = wishlistItems.map(item => `
+      <div class="wishlist-item">
+        <div class="wishlist-top">
+          <div class="wishlist-title">${item.title}</div>
+          <div class="wishlist-meta">
+            <span class="wishlist-pill">P${item.priority}</span>
+            <span class="wishlist-pill">${item.status}</span>
+          </div>
+        </div>
+        <div class="wishlist-notes">${item.notes}</div>
+      </div>
+    `).join('');
+  }
+
   update();
+  loadWishlist();
 </script>
 </body>
 </html>
