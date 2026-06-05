@@ -9,6 +9,7 @@ A real-time Tesla options simulator and trading alert system built with vanilla 
 - Scenario forecasts across bear, bull, and flat cases at expiry
 - Strategy library covering long/short calls and puts, spreads, straddles, strangles, condors, butterflies, collars, covered calls, synthetic positions, ratio spreads, and box spreads
 - Strategy presets and a model-based options chain snapshot
+- Nitai list watchlist with the current S&P 500 top 20 symbols and live Robinhood quote refresh
 - Greeks dashboard with Delta, Gamma, Theta, and Vega
 - Alert system for buy, sell, take-profit, and stop-loss triggers
 - Risk profile chart showing option value across a price range

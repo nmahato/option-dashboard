@@ -303,6 +303,47 @@
   .wishlist-notes { font-size: 11px; color: var(--hint); margin-top: 6px; }
   .wishlist-empty { font-family: var(--mono); font-size: 11px; color: var(--hint); padding: 8px 0; }
 
+  .symbols-section {
+    background: linear-gradient(180deg, rgba(24,27,32,0.95), rgba(17,19,23,0.95));
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 16px;
+    padding: 1.25rem;
+    box-shadow: var(--shadow-soft);
+  }
+  .symbols-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .symbols-note { font-size: 11px; color: var(--hint); }
+  .symbols-table-wrap { overflow-x: auto; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; }
+  table.symbols-table { width: 100%; border-collapse: collapse; min-width: 900px; }
+  .symbols-table th, .symbols-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .symbols-table th {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    background: rgba(255,255,255,0.025);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  .symbols-table td { color: var(--text); }
+  .symbols-row-current { background: rgba(0,229,160,0.05); }
+  .symbols-positive { color: var(--green); }
+  .symbols-negative { color: var(--red); }
+  .symbols-muted { color: var(--muted); }
+
   .chain-section {
     background: linear-gradient(180deg, rgba(24,27,32,0.95), rgba(17,19,23,0.95)); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 1.25rem; box-shadow: var(--shadow-soft);
   }
@@ -589,6 +630,32 @@
         <div class="wishlist-empty">Loading wishlist...</div>
       </div>
     </div>
+
+    <div class="symbols-section">
+      <div class="symbols-meta">
+        <div>
+          <p class="section-title">Nitai list</p>
+          <div class="symbols-note">S&amp;P 500 top 20 symbols with live Robinhood quote refresh.</div>
+        </div>
+        <span class="chain-pill" id="symbols-pill">Loading</span>
+      </div>
+      <div class="symbols-table-wrap">
+        <table class="symbols-table" aria-label="Nitai list live quotes">
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Name</th>
+              <th>Last</th>
+              <th>Bid</th>
+              <th>Ask</th>
+              <th>Change</th>
+              <th>Updated</th>
+            </tr>
+          </thead>
+          <tbody id="symbols-table-body"></tbody>
+        </table>
+      </div>
+    </div>
   </main>
 </div>
 
@@ -601,6 +668,9 @@
   let plChart = null, riskChart = null;
   let alerts = [];
   let wishlistItems = [];
+  let nitaiSymbols = [];
+  let nitaiQuotes = [];
+  let nitaiQuotesTimer = null;
 
   const fallbackWishlist = [
     { id: 'live-market-data', title: 'Live market data', priority: 1, status: 'planned', notes: 'Pull live TSLA price, volume, and IV instead of using static slider inputs.' },
@@ -617,6 +687,29 @@
     income: { strategy: 'iron_condor', spotOffset: 0, strikeOffset: 0, wing: 15, dte: 21, iv: 50, contracts: 1 },
     volatility: { strategy: 'long_straddle', spotOffset: 0, strikeOffset: 0, wing: 10, dte: 14, iv: 90, contracts: 1 }
   };
+
+  const fallbackNitaiSymbols = [
+    { symbol: 'NVDA', name: 'NVIDIA Corp' },
+    { symbol: 'AAPL', name: 'Apple Inc' },
+    { symbol: 'MSFT', name: 'Microsoft Corp' },
+    { symbol: 'AMZN', name: 'Amazon.com Inc' },
+    { symbol: 'GOOGL', name: 'Alphabet Inc Class A' },
+    { symbol: 'GOOG', name: 'Alphabet Inc Class C' },
+    { symbol: 'AVGO', name: 'Broadcom Inc' },
+    { symbol: 'META', name: 'Meta Platforms Inc' },
+    { symbol: 'TSLA', name: 'Tesla Inc' },
+    { symbol: 'MU', name: 'Micron Technology Inc' },
+    { symbol: 'BRK.B', name: 'Berkshire Hathaway Inc' },
+    { symbol: 'LLY', name: 'Eli Lilly & Co' },
+    { symbol: 'WMT', name: 'Walmart Inc' },
+    { symbol: 'AMD', name: 'Advanced Micro Devices Inc' },
+    { symbol: 'JPM', name: 'JPMorgan Chase & Co' },
+    { symbol: 'ORCL', name: 'Oracle Corp' },
+    { symbol: 'XOM', name: 'Exxon Mobil Corp' },
+    { symbol: 'V', name: 'Visa Inc' },
+    { symbol: 'INTC', name: 'Intel Corp' },
+    { symbol: 'JNJ', name: 'Johnson & Johnson' }
+  ];
 
   const strategyCatalog = {
     long_call: { label: 'Long call', description: 'Directional bullish exposure with limited downside.', legs: [{ kind: 'option', optionType: 'call', side: 1, strike: 'K', qty: 1 }] },
@@ -1100,8 +1193,83 @@
     `).join('');
   }
 
+  function formatQuoteChange(quote) {
+    const last = Number(quote?.last_trade_price);
+    const prev = Number(quote?.previous_close);
+    if (!Number.isFinite(last) || !Number.isFinite(prev) || prev === 0) return { text: '—', positive: false };
+    const diff = last - prev;
+    const pct = (diff / prev) * 100;
+    const sign = diff >= 0 ? '+' : '';
+    return { text: `${sign}${diff.toFixed(2)} (${sign}${pct.toFixed(2)}%)`, positive: diff >= 0 };
+  }
+
+  function renderNitaiSymbols() {
+    const el = document.getElementById('symbols-table-body');
+    if (!nitaiSymbols.length) {
+      el.innerHTML = '<tr><td colspan="7" class="symbols-muted">Loading symbols...</td></tr>';
+      document.getElementById('symbols-pill').textContent = 'Loading';
+      return;
+    }
+    el.innerHTML = nitaiSymbols.map(item => {
+      const quote = nitaiQuotes.find(q => q.symbol === item.symbol) || {};
+      const change = formatQuoteChange(quote);
+      const updated = quote.updated_at ? new Date(quote.updated_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+      const last = Number(quote.last_trade_price);
+      const bid = Number(quote.bid_price);
+      const ask = Number(quote.ask_price);
+      const prev = Number(quote.previous_close);
+      const rowClass = item.symbol === 'TSLA' ? 'symbols-row-current' : '';
+      return `
+        <tr class="${rowClass}">
+          <td><span class="chain-pill">${item.symbol}</span></td>
+          <td>${item.name}</td>
+          <td class="${last >= prev ? 'symbols-positive' : 'symbols-negative'}">${Number.isFinite(last) ? '$' + last.toFixed(2) : '—'}</td>
+          <td class="symbols-muted">${Number.isFinite(bid) ? '$' + bid.toFixed(2) : '—'}</td>
+          <td class="symbols-muted">${Number.isFinite(ask) ? '$' + ask.toFixed(2) : '—'}</td>
+          <td class="${change.positive ? 'symbols-positive' : 'symbols-negative'}">${change.text}</td>
+          <td class="symbols-muted">${updated}</td>
+        </tr>
+      `;
+    }).join('');
+    document.getElementById('symbols-pill').textContent = nitaiQuotes.length ? `Live ${nitaiQuotes.length}` : 'Loading';
+  }
+
+  async function loadNitaiSymbols() {
+    try {
+      const res = await fetch('main/data/nitai_list.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error('symbol list unavailable');
+      const data = await res.json();
+      nitaiSymbols = Array.isArray(data.symbols) && data.symbols.length ? data.symbols : fallbackNitaiSymbols;
+    } catch (err) {
+      nitaiSymbols = fallbackNitaiSymbols;
+    }
+    renderNitaiSymbols();
+  }
+
+  async function loadNitaiQuotes() {
+    if (!nitaiSymbols.length) {
+      renderNitaiSymbols();
+      return;
+    }
+    try {
+      const res = await fetch('main/data/nitai_list_quotes.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error('quotes cache unavailable');
+      const data = await res.json();
+      nitaiQuotes = Array.isArray(data.items) ? data.items : [];
+    } catch (err) {
+      nitaiQuotes = [];
+    }
+    renderNitaiSymbols();
+  }
+
+  function startNitaiQuotesPolling() {
+    if (nitaiQuotesTimer) clearInterval(nitaiQuotesTimer);
+    nitaiQuotesTimer = setInterval(loadNitaiQuotes, 30000);
+  }
+
   update();
   loadWishlist();
+  loadNitaiSymbols().then(loadNitaiQuotes).then(startNitaiQuotesPolling);
 </script>
 </body>
 </html>

@@ -1,0 +1,187 @@
+﻿{
+    "project":  "Nitai list",
+    "source":  "Robinhood live quotes",
+    "updated":  "2026-06-05T05:56:02.0315345Z",
+    "items":  [
+                  {
+                      "symbol":  "NVDA",
+                      "name":  "NVIDIA Corp",
+                      "last_trade_price":  "218.715000",
+                      "bid_price":  "207.940000",
+                      "ask_price":  "219.970000",
+                      "previous_close":  "214.750000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  },
+                  {
+                      "symbol":  "AAPL",
+                      "name":  "Apple Inc",
+                      "last_trade_price":  "311.260000",
+                      "bid_price":  "310.500000",
+                      "ask_price":  "312.300000",
+                      "previous_close":  "310.260000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  },
+                  {
+                      "symbol":  "MSFT",
+                      "name":  "Microsoft Corp",
+                      "last_trade_price":  "428.140000",
+                      "bid_price":  "422.650000",
+                      "ask_price":  "432.530000",
+                      "previous_close":  "427.340000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  },
+                  {
+                      "symbol":  "AMZN",
+                      "name":  "Amazon.com Inc",
+                      "last_trade_price":  "253.915000",
+                      "bid_price":  "246.600000",
+                      "ask_price":  "253.880000",
+                      "previous_close":  "250.020000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  },
+                  {
+                      "symbol":  "GOOGL",
+                      "name":  "Alphabet Inc Class A",
+                      "last_trade_price":  "372.350000",
+                      "bid_price":  "361.870000",
+                      "ask_price":  "392.000000",
+                      "previous_close":  "358.990000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  },
+                  {
+                      "symbol":  "GOOG",
+                      "name":  "Alphabet Inc Class C",
+                      "last_trade_price":  "369.370000",
+                      "bid_price":  "362.100000",
+                      "ask_price":  "373.050000",
+                      "previous_close":  "355.680000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  },
+                  {
+                      "symbol":  "AVGO",
+                      "name":  "Broadcom Inc",
+                      "last_trade_price":  "419.030000",
+                      "bid_price":  "413.500000",
+                      "ask_price":  "460.340000",
+                      "previous_close":  "479.230000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  },
+                  {
+                      "symbol":  "META",
+                      "name":  "Meta Platforms Inc",
+                      "last_trade_price":  "627.580000",
+                      "bid_price":  "614.290000",
+                      "ask_price":  "660.000000",
+                      "previous_close":  "622.980000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  },
+                  {
+                      "symbol":  "TSLA",
+                      "name":  "Tesla Inc",
+                      "last_trade_price":  "418.390000",
+                      "bid_price":  "416.240000",
+                      "ask_price":  "416.500000",
+                      "previous_close":  "423.700000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  },
+                  {
+                      "symbol":  "MU",
+                      "name":  "Micron Technology Inc",
+                      "last_trade_price":  "997.170000",
+                      "bid_price":  "971.700000",
+                      "ask_price":  "974.440000",
+                      "previous_close":  "1079.570000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  },
+                  {
+                      "symbol":  "BRK.B",
+                      "name":  "Berkshire Hathaway Inc",
+                      "last_trade_price":  "478.690000",
+                      "bid_price":  "468.000000",
+                      "ask_price":  "487.000000",
+                      "previous_close":  "475.370000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  },
+                  {
+                      "symbol":  "LLY",
+                      "name":  "Eli Lilly \u0026 Co",
+                      "last_trade_price":  "1125.300000",
+                      "bid_price":  "1105.000000",
+                      "ask_price":  "1130.730000",
+                      "previous_close":  "1078.780000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  },
+                  {
+                      "symbol":  "WMT",
+                      "name":  "Walmart Inc",
+                      "last_trade_price":  "117.760000",
+                      "bid_price":  "116.660000",
+                      "ask_price":  "119.580000",
+                      "previous_close":  "116.890000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  },
+                  {
+                      "symbol":  "AMD",
+                      "name":  "Advanced Micro Devices Inc",
+                      "last_trade_price":  "523.190000",
+                      "bid_price":  "500.000000",
+                      "ask_price":  "514.200000",
+                      "previous_close":  "542.520000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  },
+                  {
+                      "symbol":  "JPM",
+                      "name":  "JPMorgan Chase \u0026 Co",
+                      "last_trade_price":  "310.920000",
+                      "bid_price":  "307.220000",
+                      "ask_price":  "314.470000",
+                      "previous_close":  "300.850000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  },
+                  {
+                      "symbol":  "ORCL",
+                      "name":  "Oracle Corp",
+                      "last_trade_price":  "236.359900",
+                      "bid_price":  "228.040000",
+                      "ask_price":  "234.450000",
+                      "previous_close":  "230.330000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  },
+                  {
+                      "symbol":  "XOM",
+                      "name":  "Exxon Mobil Corp",
+                      "last_trade_price":  "152.090000",
+                      "bid_price":  "150.220000",
+                      "ask_price":  "158.900000",
+                      "previous_close":  "152.530000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  },
+                  {
+                      "symbol":  "V",
+                      "name":  "Visa Inc",
+                      "last_trade_price":  "320.217500",
+                      "bid_price":  "314.080000",
+                      "ask_price":  "326.560000",
+                      "previous_close":  "312.400000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  },
+                  {
+                      "symbol":  "INTC",
+                      "name":  "Intel Corp",
+                      "last_trade_price":  "111.790000",
+                      "bid_price":  "107.000000",
+                      "ask_price":  "109.850000",
+                      "previous_close":  "112.710000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  },
+                  {
+                      "symbol":  "JNJ",
+                      "name":  "Johnson \u0026 Johnson",
+                      "last_trade_price":  "228.250000",
+                      "bid_price":  "228.250000",
+                      "ask_price":  "249.000000",
+                      "previous_close":  "223.240000",
+                      "updated_at":  "2026-06-05T00:00:00Z"
+                  }
+              ]
+}
