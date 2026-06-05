@@ -239,6 +239,11 @@
           <option value="covered_call">Covered call</option>
           <option value="protective_put">Protective put</option>
           <option value="collar">Collar</option>
+          <option value="synthetic_long">Synthetic long</option>
+          <option value="synthetic_short">Synthetic short</option>
+          <option value="ratio_call_spread">Ratio call spread</option>
+          <option value="ratio_put_spread">Ratio put spread</option>
+          <option value="box_spread">Box spread</option>
         </select>
       </div>
       <p class="strategy-desc" id="strategy-desc"></p>
@@ -393,7 +398,12 @@
     butterfly_spread: { label: 'Call butterfly spread', description: 'Low-cost neutral strategy that peaks near the middle strike.', legs: [{ kind: 'option', optionType: 'call', side: 1, strike: 'K-W', qty: 1 }, { kind: 'option', optionType: 'call', side: -1, strike: 'K', qty: 2 }, { kind: 'option', optionType: 'call', side: 1, strike: 'K+W', qty: 1 }] },
     covered_call: { label: 'Covered call', description: 'Own 100 shares and sell a call against the position for income.', legs: [{ kind: 'stock', side: 1, qty: 100 }, { kind: 'option', optionType: 'call', side: -1, strike: 'K', qty: 1 }] },
     protective_put: { label: 'Protective put', description: 'Own 100 shares and buy a put for downside protection.', legs: [{ kind: 'stock', side: 1, qty: 100 }, { kind: 'option', optionType: 'put', side: 1, strike: 'K', qty: 1 }] },
-    collar: { label: 'Collar', description: 'Own the stock, buy downside protection, and sell upside.', legs: [{ kind: 'stock', side: 1, qty: 100 }, { kind: 'option', optionType: 'put', side: 1, strike: 'K-W', qty: 1 }, { kind: 'option', optionType: 'call', side: -1, strike: 'K+W', qty: 1 }] }
+    collar: { label: 'Collar', description: 'Own the stock, buy downside protection, and sell upside.', legs: [{ kind: 'stock', side: 1, qty: 100 }, { kind: 'option', optionType: 'put', side: 1, strike: 'K-W', qty: 1 }, { kind: 'option', optionType: 'call', side: -1, strike: 'K+W', qty: 1 }] },
+    synthetic_long: { label: 'Synthetic long', description: 'Long call plus short put at the same strike; behaves like stock.', legs: [{ kind: 'option', optionType: 'call', side: 1, strike: 'K', qty: 1 }, { kind: 'option', optionType: 'put', side: -1, strike: 'K', qty: 1 }] },
+    synthetic_short: { label: 'Synthetic short', description: 'Short call plus long put at the same strike; behaves like short stock.', legs: [{ kind: 'option', optionType: 'call', side: -1, strike: 'K', qty: 1 }, { kind: 'option', optionType: 'put', side: 1, strike: 'K', qty: 1 }] },
+    ratio_call_spread: { label: 'Ratio call spread', description: 'One long call financed by selling two higher-strike calls.', legs: [{ kind: 'option', optionType: 'call', side: 1, strike: 'K', qty: 1 }, { kind: 'option', optionType: 'call', side: -1, strike: 'K+W', qty: 2 }] },
+    ratio_put_spread: { label: 'Ratio put spread', description: 'One long put financed by selling two lower-strike puts.', legs: [{ kind: 'option', optionType: 'put', side: 1, strike: 'K', qty: 1 }, { kind: 'option', optionType: 'put', side: -1, strike: 'K-W', qty: 2 }] },
+    box_spread: { label: 'Box spread', description: 'A synthetic loan with fixed expiry payoff between two strikes.', legs: [{ kind: 'option', optionType: 'call', side: 1, strike: 'K', qty: 1 }, { kind: 'option', optionType: 'call', side: -1, strike: 'K+W', qty: 1 }, { kind: 'option', optionType: 'put', side: 1, strike: 'K+W', qty: 1 }, { kind: 'option', optionType: 'put', side: -1, strike: 'K', qty: 1 }] }
   };
 
   function tick() {
@@ -514,28 +524,29 @@
     return fmt(value);
   }
 
-  function strategyExtremes(strategyId, openingValue, K, W) {
-    switch (strategyId) {
-      case 'long_call': return { maxProfit: Infinity, maxLoss: openingValue };
-      case 'long_put': return { maxProfit: K * 100 - openingValue, maxLoss: openingValue };
-      case 'short_call': return { maxProfit: -openingValue, maxLoss: Infinity };
-      case 'short_put': return { maxProfit: -openingValue, maxLoss: K * 100 + openingValue };
-      case 'bull_call_spread': return { maxProfit: W * 100 - openingValue, maxLoss: openingValue };
-      case 'bear_put_spread': return { maxProfit: W * 100 - openingValue, maxLoss: openingValue };
-      case 'bull_put_spread': return { maxProfit: -openingValue, maxLoss: W * 100 + openingValue };
-      case 'bear_call_spread': return { maxProfit: -openingValue, maxLoss: W * 100 + openingValue };
-      case 'long_straddle': return { maxProfit: Infinity, maxLoss: openingValue };
-      case 'short_straddle': return { maxProfit: -openingValue, maxLoss: Infinity };
-      case 'long_strangle': return { maxProfit: Infinity, maxLoss: openingValue };
-      case 'short_strangle': return { maxProfit: -openingValue, maxLoss: Infinity };
-      case 'iron_condor': return { maxProfit: -openingValue, maxLoss: W * 100 + openingValue };
-      case 'iron_butterfly': return { maxProfit: -openingValue, maxLoss: W * 100 + openingValue };
-      case 'butterfly_spread': return { maxProfit: W * 100 - openingValue, maxLoss: openingValue };
-      case 'covered_call': return { maxProfit: K * 100 - openingValue, maxLoss: openingValue };
-      case 'protective_put': return { maxProfit: Infinity, maxLoss: openingValue - K * 100 };
-      case 'collar': return { maxProfit: (K + W) * 100 - openingValue, maxLoss: openingValue - Math.max(1, K - W) * 100 };
-      default: return { maxProfit: Infinity, maxLoss: openingValue };
-    }
+  function strategyHighSlope(legs, units) {
+    return legs.reduce((sum, leg) => {
+      const qty = (leg.qty || 1) * (units || 1);
+      if (leg.kind === 'stock') return sum + leg.side * qty;
+      if (leg.optionType === 'call') return sum + leg.side * qty * 100;
+      return sum;
+    }, 0);
+  }
+
+  function strategyFiniteCandidates(legs, openSpot) {
+    const strikes = [...new Set(legs.filter(leg => leg.kind === 'option').map(leg => leg.strike))].filter(v => Number.isFinite(v));
+    return [...new Set([0, openSpot, ...strikes])].sort((a, b) => a - b);
+  }
+
+  function strategyExtremes(legs, openSpot, T, r, sigma, units) {
+    const pnlValues = strategyFiniteCandidates(legs, openSpot).map(price => strategyPnl(legs, openSpot, price, T, r, sigma, units));
+    const highSlope = strategyHighSlope(legs, units);
+    const maxPnl = Math.max(...pnlValues);
+    const minPnl = Math.min(...pnlValues);
+    return {
+      maxProfit: highSlope > 0 ? Infinity : Math.max(0, maxPnl),
+      maxLoss: highSlope < 0 ? Infinity : Math.max(0, -minPnl)
+    };
   }
 
   function findBreakevens(legs, openSpot, T, r, sigma, units) {
@@ -578,7 +589,7 @@
     const legs = buildLegs(selectedStrategy, K, W);
     const openingValue = strategyOpeningValue(legs, S, T, r, iv, contracts);
     const expiryAtSpot = strategyPnl(legs, S, S, T, r, iv, contracts);
-    const extremes = strategyExtremes(selectedStrategy, openingValue, K, W);
+    const extremes = strategyExtremes(legs, S, T, r, iv, contracts);
     const breakEvens = findBreakevens(legs, S, T, r, iv, contracts);
     const greeks = strategyGreeks(legs, S, T, r, iv, contracts);
 

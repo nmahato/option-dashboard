@@ -7,7 +7,7 @@ A real-time Tesla options simulator and trading alert system built with vanilla 
 - Options simulator with a Black-Scholes pricing model and live P&L curve
 - Interactive sliders for spot price, strike, DTE, IV, and contracts
 - Scenario forecasts across bear, bull, and flat cases at expiry
-- Strategy library covering long/short calls and puts, spreads, straddles, strangles, condors, butterflies, collars, and covered calls
+- Strategy library covering long/short calls and puts, spreads, straddles, strangles, condors, butterflies, collars, covered calls, synthetic positions, ratio spreads, and box spreads
 - Greeks dashboard with Delta, Gamma, Theta, and Vega
 - Alert system for buy, sell, take-profit, and stop-loss triggers
 - Risk profile chart showing option value across a price range
