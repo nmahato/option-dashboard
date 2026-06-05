@@ -166,6 +166,63 @@
     min-width: 0;
   }
 
+  .dashboard-hero {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-end;
+    padding: 1.2rem 1.25rem;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background:
+      radial-gradient(circle at top left, rgba(0,229,160,0.14), transparent 32%),
+      linear-gradient(135deg, rgba(24,27,32,0.95), rgba(15,18,22,0.96) 58%, rgba(12,14,18,0.98));
+    box-shadow: var(--shadow);
+  }
+  .hero-copy { min-width: 0; }
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .hero-title {
+    font-size: 22px;
+    line-height: 1.15;
+    font-weight: 500;
+    color: var(--text);
+    max-width: 760px;
+  }
+  .hero-sub {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--hint);
+    max-width: 760px;
+  }
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .hero-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.09);
+    background: rgba(255,255,255,0.03);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .hero-chip strong { color: var(--green); font-weight: 600; }
+
   .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
   .pulse-card {
     background: linear-gradient(135deg, rgba(0,229,160,0.08), rgba(59,130,246,0.06) 42%, rgba(24,27,32,0.96) 100%);
@@ -444,6 +501,9 @@
     .chart-legend { flex-wrap: wrap; gap: 8px; }
     .alert-form { grid-template-columns: 1fr; }
     .scenario-row { align-items: flex-start; flex-wrap: wrap; }
+    .dashboard-hero { align-items: flex-start; flex-direction: column; }
+    .hero-actions { justify-content: flex-start; }
+    .hero-title { font-size: 20px; }
   }
 </style>
 </head>
@@ -534,6 +594,19 @@
   </aside>
 
   <main class="main">
+    <section class="dashboard-hero">
+      <div class="hero-copy">
+        <div class="hero-eyebrow">Live trading dashboard</div>
+        <div class="hero-title">Track TSLA strategies, live market pulse, and the S&amp;P 500 watchlist in one clean command center.</div>
+        <div class="hero-sub" id="hero-sub">Use the controls on the left to shape the trade. The live tables refresh automatically from Robinhood-backed quote data.</div>
+      </div>
+      <div class="hero-actions">
+        <div class="hero-chip"><span>Strategy</span> <strong id="hero-strategy">Long call</strong></div>
+        <div class="hero-chip"><span>Watchlist</span> <strong id="hero-watchlist">20 live</strong></div>
+        <div class="hero-chip"><span>TSLA</span> <strong id="hero-tsla">—</strong></div>
+      </div>
+    </section>
+
     <div class="metrics-grid">
       <div class="metric-card">
         <div class="metric-label">Net debit / credit</div>
@@ -1073,6 +1146,10 @@
 
     document.getElementById('strategy-select').value = selectedStrategy;
     document.getElementById('strategy-desc').textContent = def.description;
+    const heroStrategy = document.getElementById('hero-strategy');
+    if (heroStrategy) heroStrategy.textContent = def.label;
+    const heroSub = document.getElementById('hero-sub');
+    if (heroSub) heroSub.textContent = `Selected setup: ${def.label}. Live values update from the sliders, with the market pulse and top 20 watchlist refreshing automatically.`;
     document.getElementById('out-spot').textContent = '$' + S;
     document.getElementById('out-strike').textContent = '$' + K;
     document.getElementById('out-wing').textContent = W;
@@ -1303,6 +1380,12 @@
     loserEl.textContent = `${topLoser.symbol} ${topLoser.pct >= 0 ? '+' : ''}${topLoser.pct.toFixed(2)}%`;
     loserNoteEl.textContent = `$${Number(topLoser.last_trade_price).toFixed(2)} last`;
     subtitle.textContent = `${movers.length} names loaded. Average move: ${avgPct >= 0 ? '+' : ''}${avgPct.toFixed(2)}%.`;
+
+    const tsla = movers.find(q => q.symbol === 'TSLA');
+    const tslaEl = document.getElementById('hero-tsla');
+    if (tsla && tslaEl) {
+      tslaEl.textContent = `$${Number(tsla.last_trade_price).toFixed(2)} ${tsla.diff >= 0 ? '+' : ''}${tsla.pct.toFixed(2)}%`;
+    }
   }
 
   function renderNitaiSymbols() {
@@ -1330,11 +1413,13 @@
           <td class="symbols-muted">${Number.isFinite(ask) ? '$' + ask.toFixed(2) : '—'}</td>
           <td class="${change.positive ? 'symbols-positive' : 'symbols-negative'}">${change.text}</td>
           <td class="symbols-muted">${updated}</td>
-        </tr>
+      </tr>
       `;
     }).join('');
     document.getElementById('symbols-pill').textContent = nitaiQuotes.length ? `Live ${nitaiQuotes.length}` : 'Loading';
     renderMarketPulse();
+    const watchlistEl = document.getElementById('hero-watchlist');
+    if (watchlistEl) watchlistEl.textContent = `${nitaiSymbols.length} live`;
   }
 
   async function loadNitaiSymbols() {
