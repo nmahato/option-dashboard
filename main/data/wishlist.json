@@ -1,0 +1,74 @@
+{
+  "items": [
+    {
+      "id": "mu",
+      "title": "MU",
+      "priority": 1,
+      "status": "watching",
+      "notes": "Monitor for RSI recovery and options setup quality."
+    },
+    {
+      "id": "mrvl",
+      "title": "MRVL",
+      "priority": 2,
+      "status": "watching",
+      "notes": "Track semiconductor momentum and volatility."
+    },
+    {
+      "id": "nvda",
+      "title": "NVDA",
+      "priority": 3,
+      "status": "watching",
+      "notes": "Watch for RSI recovery after oversold conditions."
+    },
+    {
+      "id": "tsla",
+      "title": "TSLA",
+      "priority": 4,
+      "status": "watching",
+      "notes": "Primary symbol for the options simulator."
+    },
+    {
+      "id": "intc",
+      "title": "INTC",
+      "priority": 5,
+      "status": "watching",
+      "notes": "Track turnaround momentum and chip-sector rotation."
+    },
+    {
+      "id": "sndk",
+      "title": "SNDK",
+      "priority": 6,
+      "status": "watching",
+      "notes": "Monitor price action and liquidity before any setup."
+    },
+    {
+      "id": "amd",
+      "title": "AMD",
+      "priority": 7,
+      "status": "watching",
+      "notes": "Compare relative strength against NVDA and AVGO."
+    },
+    {
+      "id": "avgo",
+      "title": "AVGO",
+      "priority": 8,
+      "status": "watching",
+      "notes": "Watch for high-quality pullbacks and continuation setups."
+    },
+    {
+      "id": "aapl",
+      "title": "AAPL",
+      "priority": 9,
+      "status": "watching",
+      "notes": "Track broad-market leadership and options liquidity."
+    },
+    {
+      "id": "msft",
+      "title": "MSFT",
+      "priority": 10,
+      "status": "watching",
+      "notes": "Monitor mega-cap tech trend and options setup quality."
+    }
+  ]
+}
